@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PathoCompare — Find & Compare Pathology Labs</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#" onclick="showView('home')">
+        <i class="bi bi-clipboard2-pulse"></i> PathoCompare
+      </a>
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="#" onclick="showView('home')"><i class="bi bi-house"></i> Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" onclick="showView('labs')"><i class="bi bi-building"></i> Explore Labs</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" onclick="showView('compare')"><i class="bi bi-bar-chart"></i> Compare</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" onclick="showView('addLab')"><i class="bi bi-plus-circle"></i> Add Lab</a></li>
+        </ul>
+        <span class="navbar-text" id="navStats"></span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container py-4" id="mainContainer">
+
+    <div id="loadingSpinner" class="text-center py-5 d-none">
+      <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+      <p class="mt-2 text-muted">Loading...</p>
+    </div>
+
+    <!-- ========== HOME VIEW ========== -->
+    <div id="homeView">
+      <div class="hero-section p-4 p-md-5 mb-4 rounded-4">
+        <div class="row align-items-center">
+          <div class="col-lg-7">
+            <h1 class="display-5 fw-bold mb-3">Find the <span class="text-gradient">Best Pathology Lab</span> Near You</h1>
+            <p class="lead mb-4">Compare prices, tests, ratings & reviews across labs in your area. Make informed healthcare decisions.</p>
+            <div class="d-flex gap-2 flex-wrap">
+              <button class="btn btn-light btn-lg px-4 fw-semibold" onclick="getUserLocation()">
+                <i class="bi bi-crosshair"></i> Use My Location
+              </button>
+              <button class="btn btn-outline-light btn-lg px-4 fw-semibold" onclick="showView('labs')">
+                <i class="bi bi-building"></i> Browse All Labs
+              </button>
+            </div>
+          </div>
+          <div class="col-lg-5 mt-4 mt-lg-0">
+            <div id="heroMap" class="hero-map rounded-3" style="height:280px;background:#e8f0fe"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-icon bg-primary-soft"><i class="bi bi-building text-primary"></i></div><h3 class="fw-bold mb-0" id="statLabs">0</h3><p class="text-muted mb-0 small">Labs</p></div></div>
+        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-icon bg-success-soft"><i class="bi bi-flask text-success"></i></div><h3 class="fw-bold mb-0" id="statTests">0</h3><p class="text-muted mb-0 small">Tests</p></div></div>
+        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-icon bg-warning-soft"><i class="bi bi-star text-warning"></i></div><h3 class="fw-bold mb-0" id="statRating">0</h3><p class="text-muted mb-0 small">Avg Rating</p></div></div>
+        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-icon bg-info-soft"><i class="bi bi-chat text-info"></i></div><h3 class="fw-bold mb-0" id="statReviews">0</h3><p class="text-muted mb-0 small">Reviews</p></div></div>
+      </div>
+
+      <div class="card shadow-sm border-0 rounded-4 mb-4">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3"><i class="bi bi-geo-alt text-primary"></i> Find Labs in Your Area</h5>
+          <div class="row g-2">
+            <div class="col-md-4">
+              <input type="number" id="searchLat" class="form-control form-control-lg" placeholder="Latitude" step="any">
+            </div>
+            <div class="col-md-4">
+              <input type="number" id="searchLng" class="form-control form-control-lg" placeholder="Longitude" step="any">
+            </div>
+            <div class="col-md-4">
+              <button class="btn btn-primary btn-lg w-100" onclick="findNearbyLabs()"><i class="bi bi-search"></i> Search Area</button>
+            </div>
+          </div>
+          <div class="mt-2">
+            <button class="btn btn-sm btn-outline-primary me-2" onclick="getUserLocation()"><i class="bi bi-crosshair"></i> Use My Location</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="useSampleLocation()"><i class="bi bi-geo"></i> Demo: Indiranagar, BLR</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="searchResults" class="mb-4"></div>
+
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h4 class="fw-bold mb-0"><i class="bi bi-trophy text-warning"></i> Top Rated Labs</h4>
+        <a href="#" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="showView('labs')">View All <i class="bi bi-arrow-right"></i></a>
+      </div>
+      <div id="topLabsCarousel" class="row g-3"></div>
+    </div>
+
+    <!-- ========== LABS VIEW ========== -->
+    <div id="labsView" class="d-none">
+      <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+        <h4 class="fw-bold mb-0"><i class="bi bi-building"></i> All Pathology Labs</h4>
+        <div class="d-flex gap-2">
+          <input type="text" id="labSearchFilter" class="form-control" placeholder="Search labs..." style="max-width:240px" oninput="renderLabs()">
+          <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('labsMapSection').classList.toggle('d-none'); if(!document.getElementById('labsMapSection').classList.contains('d-none')) initLabsMap()"><i class="bi bi-map"></i></button>
+        </div>
+      </div>
+      <div id="labsMapSection" class="d-none mb-3">
+        <div id="labsMap" style="height:350px;border-radius:12px;background:#e8f0fe"></div>
+      </div>
+      <div id="labsList" class="row g-3"></div>
+    </div>
+
+    <!-- ========== LAB DETAIL VIEW ========== -->
+    <div id="labDetailView" class="d-none">
+      <button class="btn btn-outline-secondary rounded-pill px-3 mb-3" onclick="showView('labs')"><i class="bi bi-arrow-left"></i> Back</button>
+      <div id="labDetailContent"></div>
+    </div>
+
+    <!-- ========== COMPARE VIEW ========== -->
+    <div id="compareView" class="d-none">
+      <h4 class="fw-bold mb-3"><i class="bi bi-bar-chart"></i> Compare Labs</h4>
+      <div class="card border-0 shadow-sm rounded-4 mb-3">
+        <div class="card-body p-4">
+          <label class="form-label fw-semibold">Select labs to compare (hold <kbd>Ctrl</kbd> to pick multiple)</label>
+          <div class="row g-2">
+            <div class="col-md-8">
+              <select id="compareSelect" class="form-select form-select-lg" multiple></select>
+            </div>
+            <div class="col-md-4">
+              <button class="btn btn-primary btn-lg w-100 h-100" onclick="runComparison()"><i class="bi bi-bar-chart"></i> Compare</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="compareResults"></div>
+    </div>
+
+    <!-- ========== ADD LAB VIEW ========== -->
+    <div id="addLabView" class="d-none">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-primary text-white rounded-top-4 py-3">
+              <h5 class="mb-0 fw-bold"><i class="bi bi-plus-circle"></i> Add New Pathology Lab</h5>
+            </div>
+            <div class="card-body p-4">
+              <form id="addLabForm" onsubmit="addNewLab(event)">
+                <div class="row g-3">
+                  <div class="col-md-6"><label class="form-label fw-medium">Lab Name <span class="text-danger">*</span></label><input type="text" id="newLabName" class="form-control form-control-lg" required></div>
+                  <div class="col-md-6"><label class="form-label fw-medium">Phone</label><input type="text" id="newLabPhone" class="form-control form-control-lg"></div>
+                  <div class="col-12">
+                    <label class="form-label fw-medium">Set Location <span class="text-danger">*</span></label>
+                    <div class="input-group mb-2">
+                      <input type="text" id="newLabSearch" class="form-control form-control-lg" placeholder="Search for an address or place…">
+                      <button class="btn btn-outline-primary" type="button" onclick="searchLocation('newLab')"><i class="bi bi-search"></i></button>
+                    </div>
+                    <div id="newLabMap" class="location-picker-map rounded-3" style="height:300px;background:#e8f0fe"></div>
+                    <div class="d-flex justify-content-between mt-1">
+                      <small class="text-muted">Click the map or drag the marker to set location</small>
+                      <small id="newLabCoords" class="text-muted"></small>
+                    </div>
+                    <input type="hidden" id="newLabLat" required>
+                    <input type="hidden" id="newLabLng" required>
+                  </div>
+                  <div class="col-12"><label class="form-label fw-medium">Address <span class="text-danger">*</span></label><input type="text" id="newLabAddress" class="form-control form-control-lg" required placeholder="Will auto-fill from map"></div>
+                  <div class="col-md-6"><label class="form-label fw-medium">Email</label><input type="email" id="newLabEmail" class="form-control form-control-lg"></div>
+                  <div class="col-md-6"><label class="form-label fw-medium">Website</label><input type="url" id="newLabWebsite" class="form-control form-control-lg"></div>
+                  <div class="col-12"><label class="form-label fw-medium">Opening Hours</label><input type="text" id="newLabHours" class="form-control form-control-lg" placeholder="e.g. Mon–Sat 6AM–8PM"></div>
+                  <div class="col-12"><label class="form-label fw-medium">About</label><textarea id="newLabAbout" class="form-control" rows="2"></textarea></div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg mt-4 w-100"><i class="bi bi-plus-lg"></i> Add Lab</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== EDIT LAB VIEW ========== -->
+    <div id="editLabView" class="d-none">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-warning rounded-top-4 py-3">
+              <h5 class="mb-0 fw-bold"><i class="bi bi-pencil"></i> Edit Lab</h5>
+            </div>
+            <div class="card-body p-4">
+              <form id="editLabForm" onsubmit="updateLab(event)">
+                <input type="hidden" id="editLabId">
+                <div class="row g-3">
+                  <div class="col-md-6"><label class="form-label fw-medium">Name</label><input type="text" id="editLabName" class="form-control form-control-lg" required></div>
+                  <div class="col-md-6"><label class="form-label fw-medium">Phone</label><input type="text" id="editLabPhone" class="form-control form-control-lg"></div>
+                  <div class="col-md-4"><label class="form-label fw-medium">Rating</label><input type="number" id="editLabRating" class="form-control form-control-lg" step="0.1" min="0" max="5"></div>
+                  <div class="col-md-4"><label class="form-label fw-medium">Image URL</label><input type="url" id="editLabImage" class="form-control form-control-lg"></div>
+                  <div class="col-md-4"><label class="form-label fw-medium">Website</label><input type="url" id="editLabWebsite" class="form-control form-control-lg"></div>
+                  <div class="col-12">
+                    <label class="form-label fw-medium">Set Location</label>
+                    <div class="input-group mb-2">
+                      <input type="text" id="editLabSearch" class="form-control form-control-lg" placeholder="Search for an address or place…">
+                      <button class="btn btn-outline-primary" type="button" onclick="searchLocation('editLab')"><i class="bi bi-search"></i></button>
+                    </div>
+                    <div id="editLabMap" class="location-picker-map rounded-3" style="height:300px;background:#e8f0fe"></div>
+                    <div class="d-flex justify-content-between mt-1">
+                      <small class="text-muted">Click the map or drag the marker to set location</small>
+                      <small id="editLabCoords" class="text-muted"></small>
+                    </div>
+                    <input type="hidden" id="editLabLat" required>
+                    <input type="hidden" id="editLabLng" required>
+                  </div>
+                  <div class="col-12"><label class="form-label fw-medium">Address</label><input type="text" id="editLabAddress" class="form-control form-control-lg" required placeholder="Will auto-fill from map"></div>
+                  <div class="col-md-6"><label class="form-label fw-medium">Email</label><input type="email" id="editLabEmail" class="form-control form-control-lg"></div>
+                  <div class="col-md-6"><label class="form-label fw-medium">Opening Hours</label><input type="text" id="editLabHours" class="form-control form-control-lg"></div>
+                  <div class="col-12"><label class="form-label fw-medium">About</label><textarea id="editLabAbout" class="form-control" rows="2"></textarea></div>
+                </div>
+                <div class="mt-4 d-flex gap-2">
+                  <button type="submit" class="btn btn-warning btn-lg flex-fill"><i class="bi bi-check-lg"></i> Update</button>
+                  <button type="button" class="btn btn-outline-secondary btn-lg flex-fill" onclick="showView('labDetail', parseInt(document.getElementById('editLabId').value))">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== ADD TEST VIEW ========== -->
+    <div id="addTestView" class="d-none">
+      <div class="row justify-content-center">
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-success text-white rounded-top-4 py-3">
+              <h5 class="mb-0 fw-bold"><i class="bi bi-flask"></i> Add Test — <span id="addTestLabName"></span></h5>
+            </div>
+            <div class="card-body p-4">
+              <form id="addTestForm" onsubmit="addNewTest(event)">
+                <input type="hidden" id="addTestLabId">
+                <div class="mb-3"><label class="form-label fw-medium">Test Name <span class="text-danger">*</span></label><input type="text" id="newTestName" class="form-control form-control-lg" required></div>
+                <div class="mb-3"><label class="form-label fw-medium">Price (₹) <span class="text-danger">*</span></label><input type="number" id="newTestPrice" class="form-control form-control-lg" step="0.01" required></div>
+                <div class="mb-3"><label class="form-label fw-medium">Description</label><textarea id="newTestDesc" class="form-control" rows="2"></textarea></div>
+                <div class="mb-3"><label class="form-label fw-medium">Turnaround Time</label><input type="text" id="newTestTAT" class="form-control" placeholder="e.g. 4–6 Hours"></div>
+                <div class="d-flex gap-2">
+                  <button type="submit" class="btn btn-success btn-lg flex-fill"><i class="bi bi-plus-lg"></i> Add Test</button>
+                  <button type="button" class="btn btn-outline-secondary btn-lg flex-fill" onclick="hideAddTest()">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="bg-dark text-white-50 text-center py-4 mt-4">
+    <div class="container">
+      <p class="mb-1 fw-bold text-white">PathoCompare <span class="fw-normal text-white-50">MVP</span></p>
+      <p class="mb-0 small">Find &amp; Compare Pathology Labs Near You</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
